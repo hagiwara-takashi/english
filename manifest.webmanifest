@@ -1,0 +1,8 @@
+{
+  "name": "中1 英単語10",
+  "short_name": "英単語10",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f5f6f8",
+  "theme_color": "#ffffff"
+}
