@@ -1,0 +1,1 @@
+window.STUDY_DATA = {"version": 1, "source": "教材写真未確認・問題未登録", "english": [], "kanji": []};
