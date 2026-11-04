@@ -3,7 +3,12 @@ const $=s=>document.querySelector(s), KEY='test-study-20261112-v1';
 let data=Study.validate(window.STUDY_DATA), state=Study.blank(), subject='english', storageOK=true;
 function message(t){$('#message').textContent=t;}
 function storageError(){storageOK=false;$('#storage').hidden=false;$('#storage').textContent='端末に保存できません。画面を閉じる前に「教材・進捗をバックアップ」で保存してください。';}
-try{const raw=localStorage.getItem(KEY);if(raw){const pack=JSON.parse(raw);data=Study.validate(pack.data);state=Study.validState(pack.state,data);}}catch(e){storageError();message('保存データを読み込めませんでした。元の保存内容は自動で上書きしません。バックアップを復元できます。');}
+let migratedEmpty=false;
+try{const raw=localStorage.getItem(KEY);if(raw){const pack=JSON.parse(raw);const savedData=Study.validate(pack.data);const savedState=Study.validState(pack.state,savedData);
+// Empty starter data must not hide the material bundled with this release.
+if(savedData.english.length===0&&savedData.kanji.length===0&&(data.english.length||data.kanji.length)){state=savedState;migratedEmpty=true;}
+else{data=savedData;state=savedState;}
+}}catch(e){storageError();message('保存データを読み込めませんでした。元の保存内容は自動で上書きしません。バックアップを復元できます。');}
 function save(){if(!storageOK)return;try{localStorage.setItem(KEY,JSON.stringify({data,state}));}catch(e){storageError();}}
 function day(){return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());}
 function countdown(){let n=Math.round((Date.UTC(2026,10,12)-Date.parse(day()+'T00:00:00Z'))/86400000);$('#countdown').textContent=n>0?'あと '+n+' 日':n===0?'テスト当日':'テストおつかれさま';}
@@ -19,5 +24,6 @@ $('#export').onclick=()=>download('学習バックアップ-'+day()+'.json',{typ
 async function read(file){if(!file)throw Error('ファイルを選んでください。');if(file.size>4000000)throw Error('ファイルが大きすぎます。4MB以下にしてください。');return JSON.parse(await file.text());}
 $('#import').onchange=async e=>{try{const d=Study.validate(await read(e.target.files[0]));if(!d.english.length&&!d.kanji.length)throw Error('問題が0件です。確認済みの問題を登録してください。');const changed=Study.fingerprint(d)!==Study.fingerprint(data);if(changed&&Object.keys(state.records).length&&!confirm('教材が変わるため、この版の進捗をリセットします。バックアップ済みですか？'))return;data=d;if(changed)state=Study.blank();save();message('教材を登録しました。');home();}catch(err){message('教材を取り込めません：'+err.message);}finally{e.target.value='';}};
 $('#restore').onchange=async e=>{try{const p=await read(e.target.files[0]);if(p.type!=='test-study-backup'||p.version!==1)throw Error('このアプリのバックアップを選んでください。');const d=Study.validate(p.data),s=Study.validState(p.state,d);if(!confirm('教材と進捗を、このバックアップの内容に戻しますか？'))return;data=d;state=s;storageOK=true;$('#storage').hidden=true;save();home();message('バックアップを復元しました。');}catch(err){message('復元できません：'+err.message);}finally{e.target.value='';}};
+if(migratedEmpty)save();
 home();setInterval(countdown,60000);
 if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('./sw.js').catch(()=>message('オフライン準備ができませんでした。通信できる状態で使ってください。'));
